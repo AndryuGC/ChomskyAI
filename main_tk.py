@@ -2,23 +2,23 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, ttk
 import random
+import os
+from datetime import datetime
 
 from grammar_parser import GrammarParser, Grammar
 from classifier import classify_grammar
 from examples.sample_grammars import get_sample_grammars
 
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
-# --------------------------------------------------------------------
-# UTILIDADES PARA DERIVACIÓN DE CADENAS EN UNA GRAMÁTICA
-# --------------------------------------------------------------------
+
 
 def generar_cadenas(grammar: Grammar, max_len: int, max_expansiones: int = 2000):
-    """
-    Genera (heurísticamente) cadenas del lenguaje de la gramática
-    hasta longitud max_len, usando derivaciones por la izquierda.
-    Solo para gramáticas pequeñas; se usa en el clasificador y en
-    el comparador de gramáticas.
-    """
     NT = grammar.nonterminals
     start = grammar.start_symbol
 
@@ -65,11 +65,6 @@ def generar_cadenas(grammar: Grammar, max_len: int, max_expansiones: int = 2000)
 
     return cadenas
 
-
-# --------------------------------------------------------------------
-# UTILIDADES PARA REGEX -> AFN -> AFD -> GRAMÁTICA REGULAR
-# --------------------------------------------------------------------
-
 EPS = 'ε'
 
 
@@ -98,10 +93,7 @@ def agregar_concatenacion(regex: str) -> str:
 
 
 def regex_a_postfix(regex: str) -> str:
-    """
-    Shunting-yard para convertir regex con operadores ., |, * y paréntesis a postfix.
-    '*' se trata como postfix (se envía directo a la salida).
-    """
+
     prec = {'|': 1, '.': 2}
     salida = []
     pila = []
@@ -232,14 +224,6 @@ def mover(states, symbol, transitions):
 
 
 def nfa_a_dfa(start_nfa, accept_nfa, transitions, alphabet):
-    """
-    Construcción por subconjuntos.
-    Retorna:
-        dfa_states: dict[id] -> frozenset(nfa_states)
-        dfa_start: id
-        dfa_accepts: set(ids)
-        dfa_trans: dict[id][symbol] -> id
-    """
     from collections import deque
 
     dfa_states = {}
@@ -283,13 +267,9 @@ def nfa_a_dfa(start_nfa, accept_nfa, transitions, alphabet):
 
 
 def dfa_a_gramatica_regular(dfa_states, dfa_start, dfa_accepts, dfa_trans):
-    """
-    Genera producciones de una gramática regular (solo texto).
-    Cada estado se llama Q<i>.
-    """
     lines = []
     lines.append(f"Gramática Regular (símbolo inicial: Q{dfa_start})\n")
-    for sid, state_set in dfa_states.items():
+    for sid in sorted(dfa_states.keys()):
         nombre = f"Q{sid}"
         trans = dfa_trans.get(sid, {})
         for a, dest in trans.items():
@@ -330,8 +310,6 @@ def describir_afd(dfa_states, dfa_start, dfa_accepts, dfa_trans, alphabet):
     return '\n'.join(lines)
 
 
-# ============================== APP PRINCIPAL ==============================
-
 class ChomskyApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -349,11 +327,12 @@ class ChomskyApp(tk.Tk):
         self.tab_tutor = ttk.Frame(self.notebook)
         self.tab_generador = ttk.Frame(self.notebook)
 
-        self.notebook.add(self.tab_clasificador, text="Clasificador y Explicador")
-        self.notebook.add(self.tab_conversor, text="Conversor (Regex ⇒ AFD ⇒ G. Regular)")
-        self.notebook.add(self.tab_comparador, text="Comparador de Gramáticas (Heurístico)")
-        self.notebook.add(self.tab_tutor, text="Modo Tutor (Quiz)")
-        self.notebook.add(self.tab_generador, text="Generador de Ejemplos")
+        # NOMBRES TOMADOS DEL .DOCX
+        self.notebook.add(self.tab_clasificador, text="Modo Explicativo Inteligente")
+        self.notebook.add(self.tab_conversor, text="Conversores entre Representaciones")
+        self.notebook.add(self.tab_comparador, text="Reporte de Desempeño y Modo Comparativo")
+        self.notebook.add(self.tab_tutor, text="Modo Tutor Interactivo (Quiz)")
+        self.notebook.add(self.tab_generador, text="Generador Automático de Ejemplos")
 
         # Datos globales para modo tutor / generador
         self.sample_grammars = get_sample_grammars()
@@ -366,7 +345,6 @@ class ChomskyApp(tk.Tk):
         self._build_tab_tutor()
         self._build_tab_generador()
 
-    # ==================== TAB 1: CLASIFICADOR Y EXPLICADOR ====================
     def _build_tab_clasificador(self):
         frame = self.tab_clasificador
 
@@ -375,6 +353,13 @@ class ChomskyApp(tk.Tk):
 
         right = tk.Frame(frame, padx=10, pady=10)
         right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+        header = tk.Label(
+            left,
+            text="Modo Explicativo Inteligente – Clasificador de Gramáticas (Tipos 0–3)",
+            font=("Arial", 11, "bold")
+        )
+        header.pack(anchor="w", pady=(0, 5))
 
         lbl_input = tk.Label(left, text="Gramática de Entrada (una producción por línea):")
         lbl_input.pack(anchor="w")
@@ -388,7 +373,7 @@ class ChomskyApp(tk.Tk):
 
         lbl_cadena = tk.Label(
             left,
-            text="Ingresa una cadena para probar si pertenece al lenguaje (ej. ab):"
+            text="Ingresa una cadena para probar si pertenece al lenguaje (ej. a b):"
         )
         lbl_cadena.pack(anchor="w", pady=(10, 0))
 
@@ -397,9 +382,9 @@ class ChomskyApp(tk.Tk):
 
         btn = tk.Button(
             left,
-            text="Clasificar y Generar",
+            text="Clasificar y Generar Explicación",
             command=self.classify_and_generate_action,
-            bg="#4CAF50",
+            bg="#3B82F6",
             fg="white"
         )
         btn.pack(pady=10, fill=tk.X)
@@ -412,11 +397,11 @@ class ChomskyApp(tk.Tk):
         )
         self.lbl_result.pack(anchor="w")
 
-        lbl_exp = tk.Label(right, text="Explicación:")
+        lbl_exp = tk.Label(right, text="Explicación del modo inteligente:")
         lbl_exp.pack(anchor="w")
 
         self.txt_explanation = scrolledtext.ScrolledText(
-            right, width=60, height=14, wrap=tk.WORD
+            right, width=60, height=12, wrap=tk.WORD
         )
         self.txt_explanation.pack(fill=tk.BOTH, expand=True)
 
@@ -435,6 +420,14 @@ class ChomskyApp(tk.Tk):
             right, text="(sin probar)", fg="gray"
         )
         self.lbl_cadena_resultado.pack(anchor="w")
+
+        # Botón para generar PDF (inciso de Reportes PDF)
+        btn_pdf = tk.Button(
+            right,
+            text="Descargar reporte PDF",
+            command=self.generar_pdf_action
+        )
+        btn_pdf.pack(anchor="e", pady=5)
 
     def classify_and_generate_action(self):
         text = self.txt_grammar.get("1.0", tk.END).strip()
@@ -480,7 +473,96 @@ class ChomskyApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error al analizar", str(e))
 
-    # ==================== TAB 2: CONVERSOR (REGEX ⇒ ...) ====================
+    def generar_pdf_action(self):
+        """Genera un reporte PDF con la gramática, clasificación y explicación."""
+        if not REPORTLAB_AVAILABLE:
+            messagebox.showerror(
+                "Reporte PDF",
+                "Necesitas instalar reportlab en tu entorno:\n\n"
+                "python -m pip install reportlab"
+            )
+            return
+
+        gram_text = self.txt_grammar.get("1.0", tk.END).strip()
+        exp_text = self.txt_explanation.get("1.0", tk.END).strip()
+        prods_text = self.txt_productions.get("1.0", tk.END).strip()
+        clasif = self.lbl_result.cget("text")
+        cadena = self.entry_cadena.get().strip()
+        cadena_res = self.lbl_cadena_resultado.cget("text")
+
+        if not gram_text:
+            messagebox.showwarning(
+                "Reporte PDF",
+                "Primero ingresa una gramática y pulsa 'Clasificar y Generar Explicación'."
+            )
+            return
+
+        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"reporte_chomsky_{now}.pdf"
+
+        c = canvas.Canvas(filename, pagesize=letter)
+        width, height = letter
+        y = height - 50
+
+        def draw_line(line, y_pos, font="Helvetica", size=10, bold=False):
+            if bold:
+                c.setFont("Helvetica-Bold", size)
+            else:
+                c.setFont("Helvetica", size)
+            c.drawString(50, y_pos, line)
+            return y_pos - 14
+
+        # Título
+        y = draw_line("Reporte – Chomsky Classifier AI", y, size=14, bold=True)
+        y -= 10
+        y = draw_line(clasif, y)
+
+        if cadena:
+            y = draw_line(f"Cadena analizada: {cadena}", y)
+            y = draw_line(cadena_res, y)
+
+        # Gramática
+        y -= 15
+        y = draw_line("Gramática de entrada:", y, bold=True)
+        for line in gram_text.splitlines():
+            if y < 60:
+                c.showPage()
+                y = height - 50
+                y = draw_line("Reporte – Chomsky Classifier AI (continúa)", y, bold=True)
+                y -= 10
+            y = draw_line(line, y)
+
+        # Producciones detectadas
+        y -= 15
+        y = draw_line("Producciones detectadas:", y, bold=True)
+        for line in prods_text.splitlines():
+            if y < 60:
+                c.showPage()
+                y = height - 50
+                y = draw_line("Reporte – Chomsky Classifier AI (continúa)", y, bold=True)
+                y -= 10
+            y = draw_line(line, y)
+
+        # Explicación
+        y -= 15
+        y = draw_line("Explicación del modo inteligente:", y, bold=True)
+        for line in exp_text.splitlines():
+            if y < 60:
+                c.showPage()
+                y = height - 50
+                y = draw_line("Reporte – Chomsky Classifier AI (continúa)", y, bold=True)
+                y -= 10
+            y = draw_line(line, y)
+
+        c.showPage()
+        c.save()
+
+        messagebox.showinfo(
+            "Reporte PDF",
+            f"Reporte guardado como:\n{os.path.abspath(filename)}"
+        )
+
+    # ==================== TAB 2: CONVERSORES ENTRE REPRESENTACIONES ====================
     def _build_tab_conversor(self):
         frame = self.tab_conversor
 
@@ -489,15 +571,14 @@ class ChomskyApp(tk.Tk):
 
         lbl = tk.Label(
             top,
-            text="Conversor de Representaciones (Tipo 3)\n"
-                 "Regex ⇒ AFN ⇒ AFD ⇒ Gramática Regular",
-            font=("Arial", 12, "bold")
+            text="Conversores entre Representaciones\nRegex ⇒ AFN ⇒ AFD ⇒ Gramática Regular (Tipo 3)",
+            font=("Arial", 11, "bold")
         )
         lbl.pack(anchor="w")
 
         lbl_regex = tk.Label(
             top,
-            text="Ingresa una expresión regular (ej. (ab)*abb ). Símbolos simples: a, b, c..."
+            text="Ingresa una expresión regular (ej. (a|b)*abb ). Símbolos simples: a, b, c..."
         )
         lbl_regex.pack(anchor="w", pady=(10, 0))
 
@@ -506,7 +587,7 @@ class ChomskyApp(tk.Tk):
 
         btn = tk.Button(
             top,
-            text="Convertir",
+            text="Convertir Representaciones",
             command=self.convertir_regex_action
         )
         btn.pack(pady=8, anchor="w")
@@ -536,8 +617,6 @@ class ChomskyApp(tk.Tk):
         bottom.pack(fill=tk.X)
         tk.Label(
             bottom,
-            text="Nota: Implementación didáctica. No soporta todas las regex del mundo, "
-                 "pero sirve para el proyecto (a,b, |, *, paréntesis).",
             fg="gray"
         ).pack(anchor="w")
 
@@ -569,7 +648,7 @@ class ChomskyApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error en conversión", str(e))
 
-    # ==================== TAB 3: COMPARADOR HEURÍSTICO ====================
+    # ==================== TAB 3: REPORTE DE DESEMPEÑO Y MODO COMPARATIVO ====================
     def _build_tab_comparador(self):
         frame = self.tab_comparador
 
@@ -578,14 +657,12 @@ class ChomskyApp(tk.Tk):
 
         tk.Label(
             top,
-            text="Comparador Heurístico de Gramáticas (Tipo 2 / Tipo 3)",
-            font=("Arial", 12, "bold")
+            text="Reporte de Desempeño y Modo Comparativo\nComparador heurístico de lenguajes L(G1) y L(G2)",
+            font=("Arial", 11, "bold")
         ).pack(anchor="w")
 
         tk.Label(
             top,
-            text="Compara dos gramáticas generando cadenas hasta longitud n.\n"
-                 "Advertencia: la equivalencia total es indecidible; esto es solo una aproximación.",
             fg="gray"
         ).pack(anchor="w")
 
@@ -618,7 +695,7 @@ class ChomskyApp(tk.Tk):
 
         btn = tk.Button(
             bottom_top,
-            text="Comparar Lenguajes L(G1) vs L(G2)",
+            text="Comparar lenguajes L(G1) vs L(G2)",
             command=self.comparar_gramaticas_action
         )
         btn.pack(side=tk.LEFT, padx=10)
@@ -702,7 +779,7 @@ class ChomskyApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error al analizar gramáticas", str(e))
 
-    # ==================== TAB 4: MODO TUTOR (QUIZ) ====================
+    # ==================== TAB 4: MODO TUTOR INTERACTIVO (QUIZ) ====================
     def _build_tab_tutor(self):
         frame = self.tab_tutor
 
@@ -711,8 +788,8 @@ class ChomskyApp(tk.Tk):
 
         tk.Label(
             top,
-            text="Modo Tutor: ¡Ponte a prueba!",
-            font=("Arial", 12, "bold")
+            text="Modo Tutor Interactivo (Quiz)",
+            font=("Arial", 11, "bold")
         ).pack(anchor="w")
 
         tk.Label(
@@ -811,7 +888,7 @@ class ChomskyApp(tk.Tk):
                 fg="darkred"
             )
 
-    # ==================== TAB 5: GENERADOR DE EJEMPLOS ====================
+    # ==================== TAB 5: GENERADOR AUTOMÁTICO DE EJEMPLOS ====================
     def _build_tab_generador(self):
         frame = self.tab_generador
 
@@ -821,7 +898,7 @@ class ChomskyApp(tk.Tk):
         tk.Label(
             top,
             text="Generador Automático de Ejemplos",
-            font=("Arial", 12, "bold")
+            font=("Arial", 11, "bold")
         ).pack(anchor="w")
 
         tk.Label(
@@ -860,7 +937,6 @@ class ChomskyApp(tk.Tk):
 
         tk.Label(
             middle,
-            text="Nota: El generador es sencillo pero suficiente para practicar y mostrar en el proyecto.",
             fg="gray"
         ).pack(anchor="w", pady=(5, 0))
 

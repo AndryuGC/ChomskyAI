@@ -11,16 +11,10 @@ class ClassificationResult:
 
 
 def _length_no_epsilon(rhs: str) -> int:
-    """Cuenta la longitud de la producción sin epsilon (epsilon = cadena vacía)."""
     return len(rhs)
 
 
 def _is_regular(grammar: Grammar, explanation: List[str]) -> bool:
-    """
-    Checa si es Tipo 3 (Regular) con reglas tipo:
-       A -> aB | a | ε
-    Asumimos gramática lineal por la derecha.
-    """
     ok = True
     for p in grammar.productions:
         lhs = p.lhs

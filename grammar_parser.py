@@ -18,13 +18,6 @@ class Grammar:
 
 
 class GrammarParser:
-    """
-    Parser sencillo para gramáticas tipo:
-        S -> aSb | ab
-        A -> aA | b
-    Suposición: los no terminales son letras MAYÚSCULAS (S, A, B...)
-                los terminales son otros caracteres (a, b, 0, 1, etc.)
-    """
 
     ARROWS = ["->", "→", "⇒"]
 
@@ -69,11 +62,9 @@ class GrammarParser:
 
             nonterminals.add(lhs)
 
-            # RHS puede tener varias alternativas separadas por "|"
             alternatives = [alt.strip() for alt in rhs_part.split("|")]
 
             for alt in alternatives:
-                # epsilon vacío
                 if alt in ("ε", "epsilon", "EPS", "λ"):
                     rhs = ""  # representamos epsilon como cadena vacía
                 else:
@@ -91,7 +82,6 @@ class GrammarParser:
         if start_symbol is None:
             raise ValueError("No se pudo determinar el símbolo inicial.")
 
-        # Evitar que epsilon cuente como terminal
         terminals.discard("")
 
         return Grammar(
