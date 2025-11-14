@@ -1,94 +1,80 @@
-Chomsky Classifier AI
-Andry González Cantoral - 2000924
+🧠 Chomsky Classifier AI
 
-Herramienta desarrollada para analizar, clasificar y transformar gramáticas formales según la Jerarquía de Chomsky. Incluye una interfaz gráfica construida en Python (Tkinter) y diversos módulos para trabajar con autómatas, expresiones regulares y gramáticas regulares.
+Aplicación interactiva en Python diseñada para analizar, clasificar y transformar gramáticas formales utilizando la Jerarquía de Chomsky.
+Incluye una interfaz gráfica completa, conversores automáticos entre representaciones y herramientas de práctica.
 
-Características
-1. Modo Explicativo Inteligente
+🚀 Características Principales
+📘 1. Modo Explicativo Inteligente
 
-Clasifica una gramática en Tipo 0, 1, 2 o 3.
+Clasifica gramáticas en Tipo 0, 1, 2 o 3.
 
-Genera una explicación paso a paso justificando la clasificación.
+Explicación paso a paso del análisis.
 
-Permite evaluar si una cadena puede ser generada por la gramática.
+Verificación de pertenencia de cadenas.
 
-Opción para generar un reporte PDF.
+Generación de reportes PDF.
 
-2. Conversores entre Representaciones
+🔁 2. Conversores entre Representaciones
 
 Convierte automáticamente:
 
-Expresión Regular → AFN (Construcción de Thompson)
+Expresión Regular → AFN (Thompson)
 
-AFN → AFD (Método de los Subconjuntos)
+AFN → AFD (Subconjuntos)
 
-AFD → Gramática Regular Tipo 3
+AFD → Gramática Regular
 
-Muestra todos los estados, transiciones y producciones generadas.
+Muestra estados, transiciones y producciones generadas.
 
-3. Reporte de Desempeño y Modo Comparativo
+📊 3. Reporte de Desempeño y Comparador
 
-Compara dos gramáticas generando sus lenguajes hasta una longitud n.
+Compara dos gramáticas generando su lenguaje hasta longitud n.
 
-Identifica cadenas comunes y diferencias entre los lenguajes.
+Identifica coincidencias y diferencias.
 
-Determina si parecen equivalentes de forma heurística.
+Determina si los lenguajes parecen equivalentes.
 
-4. Modo Tutor Interactivo
+🎓 4. Modo Tutor Interactivo
 
-Muestra una gramática aleatoria.
+Presenta gramáticas aleatorias.
 
-El usuario debe clasificarla.
+El usuario debe clasificarlas.
 
-El sistema evalúa la respuesta y explica el porqué.
+Retroalimentación inmediata y explicación.
 
-5. Generador Automático de Gramáticas
+🧬 5. Generador Automático de Gramáticas
 
-Genera gramáticas aleatorias de cualquier tipo (0, 1, 2 o 3).
+Genera gramáticas aleatorias de Tipo 0, 1, 2 o 3.
 
-Útil para ejercicios, práctica y validación.
+Útil para estudiar o practicar.
 
-Tecnologías Utilizadas
+🛠️ Tecnologías Utilizadas
 
-Python 3.14
+🐍 Python 3.14
 
-Tkinter (Interfaz gráfica)
+🪟 Tkinter — Interfaz gráfica
 
-Reportlab (Generación de PDF)
+📝 ReportLab — Generación de PDF
 
-Construcción de Thompson (AFN)
+🧩 Construcción de Thompson (AFN)
 
-Método de Subconjuntos (AFN → AFD)
+🔄 Método de los Subconjuntos (AFN → AFD)
 
-Conversión AFD → Gramática Regular
+📐 Conversión AFD → Gramática Regular
 
-Estructura del Proyecto
 
-main_tk.py
-Contiene la interfaz gráfica y la integración de todos los módulos.
-
-grammar_parser.py
-Analiza el texto de entrada y construye la estructura formal de una gramática.
-
-classifier.py
-Implementa la lógica de clasificación según la Jerarquía de Chomsky.
-
-examples/sample_grammars.py
-Gramáticas de ejemplo utilizadas en el modo tutor y el generador automático.
-
-Ejecución
-
-Crear y activar el entorno virtual
-
+▶️ Cómo Ejecutarlo
+1. Crear entorno virtual
 python -m venv .venv
+
+2. Activarlo
+
+Windows:
+
 .\.venv\Scripts\activate
 
-
-Instalar dependencias
-
+3. Instalar dependencias
 pip install reportlab
 
-
-Ejecutar la aplicación
-
+4. Ejecutar el programa
 python main_tk.py
