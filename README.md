@@ -66,11 +66,8 @@ Genera gramáticas aleatorias de Tipo 0, 1, 2 o 3.
 ▶️ Cómo Ejecutarlo
 1. Crear entorno virtual
 python -m venv .venv
-
 2. Activarlo
-
 Windows:
-
 .\.venv\Scripts\activate
 
 3. Instalar dependencias
